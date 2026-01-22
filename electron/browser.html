@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Vip Club Browser</title>
+  <style>
+    body { 
+      margin: 0; 
+      padding: 0; 
+      background: #110b1d; 
+      display: flex; 
+      flex-direction: column; 
+      height: 100vh; 
+      overflow: hidden; 
+      font-family: 'Segoe UI', sans-serif; 
+      user-select: none;
+    }
+    #toolbar {
+      height: 44px;
+      background: #1a1625;
+      border-bottom: 1px solid #ffffff10;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 8px;
+      -webkit-app-region: drag; /* Permite arrastar a janela pela barra */
+    }
+    .btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: #a1a1aa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-app-region: no-drag;
+      transition: all 0.2s;
+    }
+    .btn:hover { 
+      background: #ffffff10; 
+      color: white; 
+    }
+    .btn:active {
+      transform: scale(0.95);
+    }
+    .btn svg { 
+      width: 18px; 
+      height: 18px; 
+      fill: currentColor; 
+    }
+    #url-container {
+      flex: 1;
+      height: 32px;
+      background: #0f0a15;
+      border: 1px solid #ffffff15;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      -webkit-app-region: no-drag;
+      margin: 0 8px;
+      transition: border-color 0.2s;
+    }
+    #url-container:focus-within {
+      border-color: #9333ea;
+    }
+    #url-bar {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: #e4e4e7;
+      font-size: 13px;
+      outline: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #loader {
+        width: 16px; 
+        height: 16px; 
+        border: 2px solid #ffffff20;
+        border-top-color: #9333ea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    webview {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: white;
+    }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <button class="btn" id="back" title="Voltar">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </button>
+    <button class="btn" id="forward" title="Avançar">
+      <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+    </button>
+    <button class="btn" id="reload" title="Recarregar">
+      <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 10h7V3l-2.35 3.35z"/></svg>
+    </button>
+    <button class="btn" id="home" title="Ir para Home">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    </button>
+
+    <div style="width: 1px; height: 20px; background: #ffffff20; margin: 0 4px;"></div>
+
+    <button class="btn" id="mobile-toggle" title="Alternar Modo Mobile/Desktop">
+      <svg viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
+    </button>
+    
+    <div id="url-container">
+        <div id="loader"></div>
+        <input type="text" id="url-bar" readonly />
+    </div>
+
+    <!-- Espaço para extensões futuras ou menu -->
+  </div>
+  
+  <!-- Webview será injetado aqui -->
+  <div id="webview-container" style="flex: 1; display: flex;"></div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const initialUrl = params.get('url');
+    const partition = params.get('partition');
+    const userAgent = params.get('userAgent');
+
+    // Injetar webview dinamicamente para garantir a partição correta
+    const container = document.getElementById('webview-container');
+    const view = document.createElement('webview');
+    
+    view.src = initialUrl;
+    view.partition = partition;
+    view.userAgent = userAgent; // User Agent (propriedade correta camelCase)
+    view.allowpopups = true; // Permitir popups (window.open)
+    view.style.width = '100%';
+    view.style.height = '100%';
+    
+    container.appendChild(view);
+
+    const backBtn = document.getElementById('back');
+    const fwdBtn = document.getElementById('forward');
+    const reloadBtn = document.getElementById('reload');
+    const homeBtn = document.getElementById('home');
+    const urlBar = document.getElementById('url-bar');
+    const loader = document.getElementById('loader');
+    const mobileBtn = document.getElementById('mobile-toggle');
+
+    let isMobileMode = false; // Começa como desktop (janela grande)
+    let hasReachedChat = false; // Controle para redirecionamento pós-login
+
+    // Controles
+    backBtn.onclick = () => view.goBack();
+    fwdBtn.onclick = () => view.goForward();
+    reloadBtn.onclick = () => {
+        if (view.isLoading()) {
+            view.stop();
+        } else {
+            view.reload();
+        }
+    };
+    homeBtn.onclick = () => view.loadURL('https://privacy.com.br/Home');
+
+    mobileBtn.onclick = () => {
+        isMobileMode = !isMobileMode;
+        if (isMobileMode) {
+            // Modo Mobile: Redimensiona janela para tamanho de celular
+            window.electronAPI.resizeWindow(480, 850);
+            mobileBtn.style.color = '#9333ea'; // Roxo ativo
+        } else {
+            // Modo Desktop: Restaura tamanho grande
+            window.electronAPI.resizeWindow(1200, 800);
+            mobileBtn.style.color = '#a1a1aa'; // Cinza normal
+        }
+    };
+
+    // Eventos do Webview
+    view.addEventListener('did-start-loading', () => {
+      loader.style.display = 'block';
+    });
+
+    view.addEventListener('dom-ready', () => {
+        // Tenta injetar CSS para forçar a exibição do menu no chat
+        // Isso ajuda mesmo se estiver em modo desktop, se o site permitir
+        view.insertCSS(`
+            /* Tenta forçar visibilidade do menu inferior se ele existir no DOM */
+            div[class*="MobileMenu"],
+            div[class*="BottomNavigation"],
+            nav[class*="mobile"],
+            .footer-mobile {
+                display: flex !important;
+                visibility: visible !important;
+                z-index: 9999 !important;
+            }
+        `);
+    });
+
+    view.addEventListener('did-stop-loading', () => {
+      loader.style.display = 'none';
+      urlBar.value = view.getURL();
+      
+      // Atualiza estado dos botões (opcional, visual)
+      backBtn.style.opacity = view.canGoBack() ? '1' : '0.5';
+      fwdBtn.style.opacity = view.canGoForward() ? '1' : '0.5';
+    });
+    
+    view.addEventListener('did-navigate', (e) => {
+        urlBar.value = e.url;
+
+        // Correção de Redirecionamento Pós-Login:
+        // Se o objetivo era ir para o Chat, mas caímos na Home sem nunca ter passado pelo Chat,
+        // (comum após login), forçamos o redirecionamento para o Chat.
+        if (initialUrl && initialUrl.includes('/Chat')) {
+            // Se chegou no Chat, marca como sucesso
+            if (e.url.includes('/Chat')) {
+                hasReachedChat = true;
+            }
+            
+            // Se caiu na Home e ainda não fomos ao Chat, tenta ir novamente
+            if (e.url.includes('/Home') && !hasReachedChat) {
+                console.log('Detectado redirecionamento para Home. Tentando ir para o Chat...');
+                // Marcamos como true ANTES de ir, para evitar loop infinito caso o Chat jogue para Home
+                hasReachedChat = true; 
+                setTimeout(() => {
+                    view.loadURL(initialUrl);
+                }, 500);
+            }
+        }
+    });
+
+    view.addEventListener('did-navigate-in-page', (e) => {
+        urlBar.value = e.url;
+    });
+
+    // Tratamento de Nova Janela (Popup)
+    // O webviewTag propaga o evento 'new-window', mas o setWindowOpenHandler no main.js
+    // deve cuidar disso se configurado. Porém, dentro de um webview, o comportamento pode variar.
+    // Vamos garantir que links target=_blank naveguem aqui mesmo ou sigam a regra do Main.
+    
+    view.addEventListener('new-window', (e) => {
+        // Se for uma navegação interna disfarçada de popup, podemos forçar aqui
+        // Mas vamos deixar o Main processar para abrir janelas independentes se for o caso
+        console.log('New window requested:', e.url);
+    });
+  </script>
+</body>
+</html>

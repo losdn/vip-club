@@ -1,0 +1,6 @@
+Command 'call' not found, did you mean:
+  command 'pall' from snap pall (3.0.1)
+  command 'calc' from deb calc (2.15.0.1-1)
+  command 'cal' from deb ncal (12.1.8)
+  command 'wall' from deb bsdutils (1:2.39.3-9ubuntu6.4)
+See 'snap info <snapname>' for additional versions.
