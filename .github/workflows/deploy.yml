@@ -1,0 +1,43 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_KEY }}
+          # password: ${{ secrets.VPS_PASSWORD }} # Use key preferably
+          port: 22
+          script: |
+            # Navigate to project directory
+            cd ${{ secrets.PROJECT_PATH }}
+
+            # Stop running application to release file locks
+            echo "Stopping running application..."
+            taskkill /F /IM electron.exe || echo "Electron not running"
+            taskkill /F /IM node.exe || echo "Node not running"
+
+            # Update code
+            echo "Pulling latest changes..."
+            git pull origin main
+
+            # Install dependencies
+            echo "Installing dependencies..."
+            call npm install
+
+            # Start the application using the bat script (detached)
+            echo "Starting application..."
+            # Using cmd /c start to launch in a separate window/process
+            cmd /c start "" run_app.bat

@@ -17,6 +17,28 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: Verifica Git e Atualiza (NOVO)
+git --version >nul 2>&1
+if %errorlevel% equ 0 (
+    if exist ".git" (
+        echo [GIT] Verificando atualizacoes do servidor...
+        git pull
+        if %errorlevel% neq 0 (
+            echo [AVISO] Nao foi possivel atualizar automaticamente.
+            echo Verifique sua internet ou se configurou o repositorio remoto.
+            echo Continuando com a versao atual...
+        ) else (
+            echo [SUCESSO] Projeto atualizado!
+        )
+    ) else (
+        echo [AVISO] Git nao configurado neste projeto. Pulando atualizacao.
+    )
+) else (
+    echo [AVISO] Git nao instalado. Atualizacao automatica desativada.
+    echo Baixe em: https://git-scm.com/download/win
+)
+echo.
+
 :: Verifica package.json
 if not exist "package.json" (
     echo [ERRO CRITICO] package.json nao encontrado!
